@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import json
+import cryptography
 from pymongo import MongoClient
 from datetime import datetime
 from cryptography.fernet import Fernet
@@ -28,52 +29,75 @@ def inserir_bd(origin, to, wasRead, message):
     except Exception as e:
         print(e)
         
-def imprimir_bd():
+def imprimir_bd(user):
     try:
         client = MongoClient("mongodb+srv://guizones:guigayreclamao@cluster-0.mo6jtw3.mongodb.net/")
         db = client["chat"]
         messages = db["messages"].find({"from": user})
-
+        print()
         for i, message in enumerate(messages, 1):
-            print(f"Mensagem {i}: {message['message']}")
+            print(f"Mensagem {i}: {message['message'].decode('utf-8')}")
             print()
 
         client.close()
     except Exception as e:
         print(f"Ocorreu um erro: {e}")
+        
+def decifrar_msg(choice, user):
+    client = MongoClient("mongodb+srv://guizones:guigayreclamao@cluster-0.mo6jtw3.mongodb.net/")
+    db = client["chat"]
+    message = db["messages"].find_one({"from": user}, skip=choice-1)
 
+    if message:
+        try:
+            secretkey = str(input("Qual sua chave secreta? "))
+            key = gerar_chave_fernet(secretkey.encode('utf-8'))
+            fernet = Fernet(key)
 
-texto_chave_secreta = "Minha terra tem palmeira onde canta o sabiá, seno A . cos B + sen B . cos A"
-key = gerar_chave_fernet(texto_chave_secreta.encode('utf-8'))
-fernet = Fernet(key)
-mensagem_em_claro = "Minha mensagem secreta..."
-texto_cifrado = fernet.encrypt(mensagem_em_claro.encode('utf-8'))
-texto_decifrado = fernet.decrypt(texto_cifrado).decode('utf-8')
+            texto_cifrado = message["message"]
+            texto_decifrado = fernet.decrypt(texto_cifrado).decode('utf-8')
 
-print(f"string para gerar a chave: {texto_chave_secreta}")
-print(f"mensagem_em_claro: {mensagem_em_claro}")
-print(f"chave gerada em bytes: {key}")
-print(f"chave gerada em impressão de string: {key.decode()}")
-print(f"texto_cifrado: {texto_cifrado}")
-print(f"texto_decifrado: {texto_decifrado}")
+            print(f"Mensagem selecionada: {texto_cifrado.decode('utf-8')}")
+            print(f"Mensagem decifrada: {texto_decifrado}")
+        except cryptography.fernet.InvalidToken:
+            print("Erro ao decifrar a mensagem. Chave incorreta.")
+        except Exception as e:
+            print(f"Ocorreu um erro durante a descriptografia: {e}")
+    else:
+        print("Mensagem não encontrada.")
+    print()
+    client.close()
 
 while True:
-    user = input("Login: (Bob | Alice) - ")
-    user = user.lower()
-    print("Você está conectado como:", user)
-    if user == "bob":
-        to = "alice"
-    else:
-        to = "bob"
-    case = input(f"O que você deseja? \n1 - Enviar mensagem secreta para {to}\n2 - Ler suas mensagens que estão no banco\n-> ")
-    match case:
-        case "1":
-            message = input("Digite a mensagem que você deseja enviar - ")
-            texto_cifrado = fernet.encrypt(mensagem_em_claro.encode('utf-8'))
-            inserir_bd(user, to, False, texto_cifrado)
-        case "2":
-            print("Guizones e Eu faremos em goma")
-            imprimir_bd()
-            choice = int(input("Qual mensagem deseja ler? "))
-            
-
+    try:
+        user = input("Login: (Bob | Alice) - ")
+        user = user.lower()
+        if user != "bob" and user != "alice":
+            raise ValueError("Usuário inválido. Por favor, escolha entre Bob e Alice.")
+        logado = True
+        while logado:
+            print("Você está conectado como:", user)
+            if user == "bob":
+                to = "alice"
+            else:
+                to = "bob"
+            case = input(f"O que você deseja? \n1 - Enviar mensagem secreta para {to}\n2 - Ler suas mensagens que estão no banco\n3 - Trocar de usuário\n-> ")
+            if case == "1":
+                message = input("Digite a mensagem que você deseja enviar - ")
+                secretkey = "n sei"
+                key = gerar_chave_fernet(secretkey.encode('utf-8'))
+                fernet = Fernet(key)
+                texto_cifrado = fernet.encrypt(message.encode('utf-8'))
+                inserir_bd(user, to, False, texto_cifrado)
+            elif case == "2":
+                imprimir_bd(user)
+                try:
+                    choice = int(input("Qual mensagem deseja ler? "))
+                except ValueError:
+                    print("Entrada inválida. Por favor, insira um número inteiro.")
+                    continue
+                decifrar_msg(choice, user)
+            elif case == "3":
+                logado = False
+    except ValueError as e:
+        print(str(e))
