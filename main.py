@@ -59,6 +59,12 @@ def decifrar_msg(choice, user):
 
             print(f"Mensagem selecionada: {texto_cifrado.decode('utf-8')}")
             print(f"Mensagem decifrada: {texto_decifrado}")
+            try:
+                db["messages"].update_one({"_id": message["_id"]}, {"$set": {"wasRead": True}})
+            except Exception as e:
+                print(f"Ocorreu um erro ao tentar alterar a mensagem para 'lida': {e}")
+            print(f"Mensagem {choice} marcada como lida.")
+                
         except cryptography.fernet.InvalidToken:
             print("Erro ao decifrar a mensagem. Chave incorreta.")
         except Exception as e:
@@ -67,6 +73,8 @@ def decifrar_msg(choice, user):
         print("Mensagem não encontrada.")
     print()
     client.close()
+
+
 
 while True:
     try:
@@ -101,3 +109,4 @@ while True:
                 logado = False
     except ValueError as e:
         print(str(e))
+
