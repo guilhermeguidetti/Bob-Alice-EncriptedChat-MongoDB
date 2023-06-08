@@ -25,6 +25,7 @@ def inserir_bd(origin, to, wasRead, message):
         client = MongoClient("mongodb+srv://guizones:guigayreclamao@cluster-0.mo6jtw3.mongodb.net/")
         db = client["chat"]
         db["messages"].insert_one(data)
+        print(origin + ", sua mensagem foi gravada no banco.")
         client.close()
     except Exception as e:
         print(e)
