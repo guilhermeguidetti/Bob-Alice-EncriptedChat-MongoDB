@@ -92,7 +92,7 @@ while True:
             case = input(f"O que você deseja? \n1 - Enviar mensagem secreta para {to}\n2 - Ler suas mensagens que estão no banco\n3 - Trocar de usuário\n-> ")
             if case == "1":
                 message = input("Digite a mensagem que você deseja enviar - ")
-                secretkey = "n sei"
+                secretkey = input("Digite um pequeno texto para cifrar a mensagem - ")
                 key = gerar_chave_fernet(secretkey.encode('utf-8'))
                 fernet = Fernet(key)
                 texto_cifrado = fernet.encrypt(message.encode('utf-8'))
